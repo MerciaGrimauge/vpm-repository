@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT-0 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="VCC・ALCOM に追加できる VPM パッケージリポジトリ。">
+  <title>VPM Repository</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><span class="mark" aria-hidden="true">VPM</span><span>PACKAGE REPOSITORY</span><a href="./index.json">JSON</a></header>
+    <section class="hero" aria-labelledby="repo-name">
+      <p class="eyebrow">FOR VCC &amp; ALCOM</p>
+      <h1 id="repo-name">VPM Repository</h1>
+      <p id="description">パッケージ情報を読み込んでいます。</p>
+      <div class="actions"><a id="add-repo" class="primary" hidden>VCC / ALCOM に追加</a><a href="#packages" class="secondary">パッケージを見る</a></div>
+      <p class="hint">追加ボタンは、OS に登録されている VCC または ALCOM を開きます。</p>
+      <label for="repo-url">リポジトリ URL</label>
+      <div class="url-row"><input id="repo-url" readonly spellcheck="false" aria-label="リポジトリ URL"><button id="copy" disabled>コピー</button></div>
+      <p id="status" role="status" aria-live="polite"></p>
+    </section>
+    <section id="packages" aria-labelledby="package-heading">
+      <div class="section-heading"><h2 id="package-heading">Packages</h2><span id="count">—</span></div>
+      <label for="search" class="visually-hidden">パッケージを検索</label><input id="search" type="search" placeholder="パッケージ名・説明から検索" disabled>
+      <div id="package-list"></div>
+      <p id="empty" hidden>公開されているパッケージはまだありません。</p>
+    </section>
+    <footer><span id="author"></span><span><a href="./LICENSE">MIT-0 License</a></span></footer>
+  </main>
+  <noscript><p>JavaScript が無効です。<a href="./index.json">index.json</a> の URL を VCC / ALCOM のリポジトリ追加画面に入力してください。</p></noscript>
+</body>
+</html>
