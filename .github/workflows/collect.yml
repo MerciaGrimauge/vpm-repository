@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: MIT-0
+name: Collect published packages
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [vpm-release]
+  push:
+    branches: [main]
+    paths:
+      - sources.json
+      - tools/collect.py
+      - .github/workflows/collect.yml
+permissions:
+  contents: read
+concurrency:
+  group: vpm-collection
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: github.repository == 'MerciaGrimauge/vpm-repository' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (MIT)
+        with:
+          persist-credentials: false
+      - name: Collect public Release manifests
+        run: python3 tools/collect.py
+      - name: Save package index
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -- index.json
+          if ! git diff --cached --quiet; then
+            owner_id=$(gh api users/MerciaGrimauge --jq .id)
+            git config user.name MerciaGrimauge
+            git config user.email "${owner_id}+MerciaGrimauge@users.noreply.github.com"
+            git -c core.hooksPath=/dev/null commit -m "Update package index"
+            git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin HEAD:main
+          fi
+      - name: Request Pages build when needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          revision=$(git rev-parse HEAD)
+          built_revision=$(gh api "repos/$GITHUB_REPOSITORY/pages/builds/latest" --jq .commit)
+          build_status=$(gh api "repos/$GITHUB_REPOSITORY/pages/builds/latest" --jq .status)
+          if [ "$revision" != "$built_revision" ] || [ "$build_status" = errored ]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --silent
+          fi

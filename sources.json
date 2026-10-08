@@ -1,0 +1,14 @@
+[
+  {
+    "repo": "MerciaGrimauge/unity-editor-event-handlers",
+    "packageName": "io.github.merciagrimauge.editor-event-handlers",
+    "manifestAsset": "editor-event-handlers.package.json",
+    "includePrerelease": false
+  },
+  {
+    "repo": "MerciaGrimauge/unity-editor-event-handlers",
+    "packageName": "io.github.merciagrimauge.avatar-placement",
+    "manifestAsset": "avatar-placement.package.json",
+    "includePrerelease": false
+  }
+]
