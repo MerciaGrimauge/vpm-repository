@@ -1,20 +1,24 @@
 # MerciaGrimauge VPM Repository
 
-VCC / ALCOM に追加して利用できる、VRChat向けのVPMパッケージ一覧です。
+ALCOMに追加して利用できる、VRChat向けのVPMパッケージ一覧です。
 
 ## 利用方法
 
 1. [パッケージ一覧ページ](https://merciagrimauge.github.io/vpm-repository/)を開きます。
-2. 「VCC / ALCOM に追加」ボタンから、使用しているアプリにリポジトリを追加します。
-3. アプリで対象のUnityプロジェクトを選び、必要なパッケージを導入します。
+2. 「ALCOM / VCC に追加」ボタンから、ALCOMにリポジトリを追加します。
+3. ALCOMで対象のUnityプロジェクトを選び、必要なパッケージを導入します。
 
-追加ボタンでアプリが開かない場合は、VCCまたはALCOMのリポジトリ追加画面に、次のURLを入力してください。
+追加ボタンは、OSに登録されているALCOMまたはVCCを開きます。ボタンからアプリを選択することはできません。ALCOMが開かない場合は、ALCOMのリポジトリ追加画面に次のURLを入力してください。
 
 ```text
 https://merciagrimauge.github.io/vpm-repository/index.json
 ```
 
-[index.json](https://merciagrimauge.github.io/vpm-repository/index.json)は、VCC / ALCOMが読み込むパッケージ一覧です。ブラウザーで表示するだけではパッケージはインストールされません。
+[index.json](https://merciagrimauge.github.io/vpm-repository/index.json)は、ALCOMが読み込むパッケージ一覧です。ブラウザーで表示するだけではパッケージはインストールされません。
+
+## VCCによる代替導入
+
+追加ボタンのURLはVCCにも対応する形式です。VCCでのインストールは検証していないため非推奨で、ALCOMを利用できない場合の代替扱いです。利用する場合は、VCCのリポジトリ追加画面へ上記のURLを入力してください。
 
 ## 現在の配布内容
 
@@ -25,6 +29,12 @@ https://merciagrimauge.github.io/vpm-repository/index.json
 ## ライセンス
 
 この一覧とWeb表示のライセンスは[MIT-0](LICENSE)です。掲載される各パッケージのライセンスと利用条件は、それぞれの配布元を確認してください。
+
+## 出典 / Source
+
+この一覧のWeb表示は、[MerciaGrimauge/vpm-repository-template](https://github.com/MerciaGrimauge/vpm-repository-template)（非公開・MIT-0）を基にしています。VRChat公式テンプレート由来のコードは使用していません。テンプレートの閲覧には権限が必要です。
+
+The web pages in this listing are based on [MerciaGrimauge/vpm-repository-template](https://github.com/MerciaGrimauge/vpm-repository-template) (private, MIT-0), without reusing code from VRChat's official templates. Access to the template requires permission.
 
 ## ライブラリを開発・管理するAIエージェントへ / For library development and maintenance agents
 

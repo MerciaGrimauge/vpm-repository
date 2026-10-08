@@ -110,8 +110,7 @@ async function start() {
       throw new Error("invalid listing");
     document.title = repo.name;
     byId("repo-name").textContent = repo.name;
-    byId("description").textContent =
-      site.description || "VCC / ALCOM 用パッケージを配信しています。";
+    byId("description").textContent = site.description || "ALCOM 向けパッケージを配信しています。";
     byId("author").textContent = repo.author;
     byId("repo-url").value = url;
     byId("add-repo").href = `vcc://vpm/addRepo?url=${encodeURIComponent(url)}`;

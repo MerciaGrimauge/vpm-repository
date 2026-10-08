@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="description" content="VCC・ALCOM に追加できる VPM パッケージリポジトリ。" />
+    <meta name="description" content="ALCOM 向けの VPM パッケージリポジトリ。" />
     <title>VPM Repository</title>
     <link rel="stylesheet" href="./style.css" />
     <script src="./app.js" defer></script>
@@ -17,14 +17,17 @@
         ><a href="./index.json">JSON</a>
       </header>
       <section class="hero" aria-labelledby="repo-name">
-        <p class="eyebrow">FOR VCC &amp; ALCOM</p>
+        <p class="eyebrow">FOR ALCOM</p>
         <h1 id="repo-name">VPM Repository</h1>
         <p id="description">パッケージ情報を読み込んでいます。</p>
         <div class="actions">
-          <a id="add-repo" class="primary" hidden>VCC / ALCOM に追加</a
+          <a id="add-repo" class="primary" hidden>ALCOM / VCC に追加</a
           ><a href="#packages" class="secondary">パッケージを見る</a>
         </div>
-        <p class="hint">追加ボタンは、OS に登録されている VCC または ALCOM を開きます。</p>
+        <p class="hint">追加ボタンは、OS に登録されている ALCOM または VCC を開きます。</p>
+        <p class="hint">
+          ALCOM の利用を前提としています。VCC でのインストールは未検証のため非推奨です。
+        </p>
         <label for="repo-url">リポジトリ URL</label>
         <div class="url-row">
           <input id="repo-url" readonly spellcheck="false" aria-label="リポジトリ URL" /><button
@@ -52,7 +55,7 @@
     </main>
     <noscript
       ><p>
-        JavaScript が無効です。<a href="./index.json">index.json</a> の URL を VCC / ALCOM
+        JavaScript が無効です。<a href="./index.json">index.json</a> の URL を ALCOM
         のリポジトリ追加画面に入力してください。
       </p></noscript
     >
