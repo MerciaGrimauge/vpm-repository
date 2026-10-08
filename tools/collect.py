@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 from pathlib import Path
 import re
 import sys
@@ -359,6 +360,19 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 SECRET_QUERY = re.compile(r"(?:token|secret|password|signature|api[_-]?key)=", re.I)
 
 
+class PublicGitHub(GitHub):
+    """Share release metadata between packages registered in the same repository."""
+
+    def __init__(self, token=None):
+        super().__init__(token)
+        self.page_cache = {}
+
+    def pages(self, endpoint):
+        if endpoint not in self.page_cache:
+            self.page_cache[endpoint] = list(super().pages(endpoint))
+        return iter(copy.deepcopy(self.page_cache[endpoint]))
+
+
 def check_public_text(value, email):
     if isinstance(value, dict):
         for key, child in value.items():
@@ -441,8 +455,8 @@ def validate_index(value):
 
 
 def synchronize(root, client=None):
-    # Anonymous requests make inaccessible repositories fail before any collection.
-    client = client or GitHub()
+    # Repository metadata must confirm public visibility before reading Releases.
+    client = client or PublicGitHub(os.getenv("GITHUB_TOKEN"))
     previous = validate_index(read_json(root / "index.json"))
     sources = validate_sources(read_json(root / "sources.json"))
     profile = client.json(f"https://api.github.com/users/{OWNER}")

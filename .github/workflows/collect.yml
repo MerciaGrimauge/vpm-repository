@@ -30,6 +30,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Collect public Release manifests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python3 tools/collect.py
       - name: Save package index
         env:
