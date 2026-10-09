@@ -2,6 +2,32 @@
   "author": "マーシア・グリマージ (MerciaGrimauge)",
   "id": "io.github.merciagrimauge.vpm",
   "name": "MerciaGrimauge VPM Repository",
-  "packages": {},
+  "packages": {
+    "io.github.merciagrimauge.aao-auto-attach": {
+      "versions": {
+        "0.1.3": {
+          "author": {
+            "email": "218344561+MerciaGrimauge@users.noreply.github.com",
+            "name": "マーシア・グリマージ",
+            "url": "https://github.com/MerciaGrimauge"
+          },
+          "description": "Adds AAO Trace And Optimize to newly placed avatar prefab roots.",
+          "displayName": "AAO Auto Attach",
+          "documentationUrl": "https://github.com/MerciaGrimauge/aao-auto-attach/tree/main/Packages/io.github.merciagrimauge.aao-auto-attach",
+          "license": "MIT",
+          "name": "io.github.merciagrimauge.aao-auto-attach",
+          "unity": "2022.3",
+          "url": "https://github.com/MerciaGrimauge/aao-auto-attach/releases/download/v0.1.3/io.github.merciagrimauge.aao-auto-attach-0.1.3.zip",
+          "version": "0.1.3",
+          "vpmDependencies": {
+            "com.anatawa12.avatar-optimizer": ">=1.9.20 <2.0.0",
+            "io.github.merciagrimauge.avatar-placement": "^0.2.4",
+            "io.github.merciagrimauge.editor-event-handlers": "^0.3.0"
+          },
+          "zipSHA256": "e94aacd45847a4835f02e877f631b07f5215752556fea31589b2f1037e7a51aa"
+        }
+      }
+    }
+  },
   "url": "https://merciagrimauge.github.io/vpm-repository/index.json"
 }

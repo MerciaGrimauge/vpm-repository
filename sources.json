@@ -10,5 +10,11 @@
     "packageName": "io.github.merciagrimauge.avatar-placement",
     "manifestAsset": "avatar-placement.package.json",
     "includePrerelease": false
+  },
+  {
+    "repo": "MerciaGrimauge/aao-auto-attach",
+    "packageName": "io.github.merciagrimauge.aao-auto-attach",
+    "manifestAsset": "aao-auto-attach.package.json",
+    "includePrerelease": false
   }
 ]
