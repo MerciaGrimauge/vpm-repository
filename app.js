@@ -1,12 +1,18 @@
 /* SPDX-License-Identifier: MIT-0 */
 "use strict";
-const byId = (id) => document.getElementById(id);
-const node = (tag, value, className) => {
-  const result = document.createElement(tag);
-  if (value !== undefined) result.textContent = String(value);
-  if (className) result.className = className;
-  return result;
-};
+
+function getElement(id) {
+  return document.getElementById(id);
+}
+
+function createElement(tag, text, className) {
+  const element = document.createElement(tag);
+  if (text !== undefined) element.textContent = String(text);
+  if (className) element.className = className;
+  return element;
+}
+
+// 表示するリンクは、認証情報を含まないHTTPS URLに限定します。
 function safeUrl(value) {
   try {
     const url = new URL(value);
@@ -15,140 +21,233 @@ function safeUrl(value) {
     return null;
   }
 }
-function compareVersion(a, b) {
-  const parse = (v) => {
-    const [core, pre] = v.split("+")[0].split(/-(.*)/s);
-    return { core: core.split(".").map(BigInt), pre: pre?.split(".") };
+
+function createLink(label, value) {
+  const url = safeUrl(value);
+  if (!url) return null;
+
+  const link = createElement("a", label);
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  return link;
+}
+
+// ビルドメタデータを除き、数値部分とプレリリース識別子を別々に比較します。
+function parseVersion(version) {
+  const [core, prerelease] = version.split("+")[0].split(/-(.*)/s);
+  return {
+    core: core.split(".").map(BigInt),
+    prerelease: prerelease?.split("."),
   };
-  const left = parse(a),
-    right = parse(b);
-  for (let i = 0; i < 3; i++) {
-    if (left.core[i] !== right.core[i]) return left.core[i] > right.core[i] ? 1 : -1;
+}
+
+function comparePrereleaseIdentifiers(left, right) {
+  if (left === right) return 0;
+  if (left === undefined || right === undefined) return left === undefined ? -1 : 1;
+
+  const leftIsNumeric = /^\d+$/.test(left);
+  const rightIsNumeric = /^\d+$/.test(right);
+  if (leftIsNumeric !== rightIsNumeric) return leftIsNumeric ? -1 : 1;
+
+  if (leftIsNumeric) return BigInt(left) > BigInt(right) ? 1 : -1;
+  return left > right ? 1 : -1;
+}
+
+function comparePrereleaseVersions(left, right) {
+  if (!left || !right) {
+    if (left) return -1;
+    return right ? 1 : 0;
   }
-  if (!left.pre || !right.pre) return left.pre ? -1 : right.pre ? 1 : 0;
-  for (let i = 0; i < Math.max(left.pre.length, right.pre.length); i++) {
-    const x = left.pre[i],
-      y = right.pre[i];
-    if (x === y) continue;
-    if (x === undefined || y === undefined) return x === undefined ? -1 : 1;
-    const nx = /^\d+$/.test(x),
-      ny = /^\d+$/.test(y);
-    if (nx !== ny) return nx ? -1 : 1;
-    return nx ? (BigInt(x) > BigInt(y) ? 1 : -1) : x > y ? 1 : -1;
+
+  const identifierCount = Math.max(left.length, right.length);
+  for (let index = 0; index < identifierCount; index++) {
+    const comparison = comparePrereleaseIdentifiers(left[index], right[index]);
+    if (comparison !== 0) return comparison;
   }
   return 0;
 }
-function link(label, value) {
-  const url = safeUrl(value);
-  if (!url) return null;
-  const result = node("a", label);
-  result.href = url;
-  result.target = "_blank";
-  result.rel = "noopener noreferrer";
-  return result;
+
+function compareVersion(leftVersion, rightVersion) {
+  const left = parseVersion(leftVersion);
+  const right = parseVersion(rightVersion);
+
+  for (let index = 0; index < 3; index++) {
+    if (left.core[index] !== right.core[index]) {
+      return left.core[index] > right.core[index] ? 1 : -1;
+    }
+  }
+  return comparePrereleaseVersions(left.prerelease, right.prerelease);
 }
-function packageCard(id, record) {
-  const versions = Object.keys(record.versions).sort((a, b) => compareVersion(b, a));
-  if (!versions.length) return null;
-  const stable = versions.find((v) => !v.split("+")[0].includes("-"));
-  const latest = record.versions[stable || versions[0]];
-  const card = node("article", undefined, "package");
-  card.append(
-    node("h3", latest.displayName || id),
-    node("p", id, "id"),
-    node("p", latest.description || "説明はありません。", "description"),
-  );
-  const tags = node("div", undefined, "tags");
-  for (const value of [
-    latest.version,
-    latest.license,
-    latest.unity ? `Unity ${latest.unity}+` : null,
-  ]) {
-    if (value) tags.append(node("span", value, "tag"));
+
+function createPackageTags(manifest) {
+  const tags = createElement("div", undefined, "tags");
+  const values = [
+    manifest.version,
+    manifest.license,
+    manifest.unity ? `Unity ${manifest.unity}+` : null,
+  ];
+  for (const value of values) {
+    if (value) tags.append(createElement("span", value, "tag"));
   }
-  card.append(tags);
-  const nav = node("nav");
-  for (const [label, value] of [
-    ["ドキュメント", latest.documentationUrl],
-    ["変更履歴", latest.changelogUrl],
-    ["ZIP", latest.url],
-  ]) {
-    const item = link(label, value);
-    if (item) nav.append(item);
+  return tags;
+}
+
+function createPackageLinks(manifest) {
+  const navigation = createElement("nav");
+  const links = [
+    ["ドキュメント", manifest.documentationUrl],
+    ["変更履歴", manifest.changelogUrl],
+    ["ZIP", manifest.url],
+  ];
+  for (const [label, url] of links) {
+    const link = createLink(label, url);
+    if (link) navigation.append(link);
   }
-  card.append(nav);
-  const details = node("details"),
-    list = node("ul");
-  details.append(node("summary", `すべてのバージョン (${versions.length})`));
-  for (const v of versions) {
-    const item = node("li"),
-      download = link(v, record.versions[v].url);
-    item.append(download || node("span", v));
+  return navigation;
+}
+
+function createVersionHistory(record, sortedVersions) {
+  const details = createElement("details");
+  const list = createElement("ul");
+  details.append(createElement("summary", `すべてのバージョン (${sortedVersions.length})`));
+
+  for (const version of sortedVersions) {
+    const item = createElement("li");
+    const download = createLink(version, record.versions[version].url);
+    item.append(download || createElement("span", version));
     list.append(item);
   }
   details.append(list);
-  card.append(details);
+  return details;
+}
+
+function packageCard(id, record) {
+  const sortedVersions = Object.keys(record.versions).sort((left, right) =>
+    compareVersion(right, left),
+  );
+  if (sortedVersions.length === 0) return null;
+
+  // 安定版があれば優先し、なければ最新のプレリリースを表示します。
+  const newestStableVersion = sortedVersions.find(
+    (version) => !version.split("+")[0].includes("-"),
+  );
+  const displayedManifest = record.versions[newestStableVersion || sortedVersions[0]];
+  const card = createElement("article", undefined, "package");
+  card.append(
+    createElement("h3", displayedManifest.displayName || id),
+    createElement("p", id, "id"),
+    createElement("p", displayedManifest.description || "説明はありません。", "description"),
+    createPackageTags(displayedManifest),
+    createPackageLinks(displayedManifest),
+    createVersionHistory(record, sortedVersions),
+  );
   card.dataset.search =
-    `${id} ${latest.displayName || ""} ${latest.description || ""}`.toLocaleLowerCase();
+    `${id} ${displayedManifest.displayName || ""} ${displayedManifest.description || ""}`.toLocaleLowerCase();
   return card;
 }
-async function start() {
+
+async function loadRepositoryData() {
+  const responses = await Promise.all([
+    fetch("./index.json", { cache: "no-store" }),
+    fetch("./site.json", { cache: "no-store" }),
+  ]);
+  if (responses.some((response) => !response.ok)) throw new Error("listing fetch failed");
+
+  const [repository, site] = await Promise.all(responses.map((response) => response.json()));
+  return { repository, site };
+}
+
+function validateRepository(repository) {
+  const url = safeUrl(repository.url);
+  if (
+    !url ||
+    typeof repository.name !== "string" ||
+    !repository.packages ||
+    typeof repository.packages !== "object"
+  ) {
+    throw new Error("invalid listing");
+  }
+  return url;
+}
+
+function renderRepositoryHeader(repository, site, url) {
+  document.title = repository.name;
+  getElement("repo-name").textContent = repository.name;
+  getElement("description").textContent =
+    site.description || "ALCOM 向けパッケージを配信しています。";
+  getElement("author").textContent = repository.author;
+  getElement("repo-url").value = url;
+  getElement("add-repo").href = `vcc://vpm/addRepo?url=${encodeURIComponent(url)}`;
+  getElement("add-repo").hidden = false;
+}
+
+async function copyRepositoryUrl(url) {
   try {
-    const responses = await Promise.all([
-      fetch("./index.json", { cache: "no-store" }),
-      fetch("./site.json", { cache: "no-store" }),
-    ]);
-    if (responses.some((r) => !r.ok)) throw new Error("listing fetch failed");
-    const [repo, site] = await Promise.all(responses.map((r) => r.json()));
-    const url = safeUrl(repo.url);
-    if (
-      !url ||
-      typeof repo.name !== "string" ||
-      !repo.packages ||
-      typeof repo.packages !== "object"
-    )
-      throw new Error("invalid listing");
-    document.title = repo.name;
-    byId("repo-name").textContent = repo.name;
-    byId("description").textContent = site.description || "ALCOM 向けパッケージを配信しています。";
-    byId("author").textContent = repo.author;
-    byId("repo-url").value = url;
-    byId("add-repo").href = `vcc://vpm/addRepo?url=${encodeURIComponent(url)}`;
-    byId("add-repo").hidden = false;
-    byId("copy").disabled = false;
-    byId("copy").addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-        byId("status").textContent = "URL をコピーしました。";
-      } catch {
-        byId("repo-url").focus();
-        byId("repo-url").select();
-        byId("status").textContent =
-          "URL を選択しました。Ctrl+C / Command+C でコピーしてください。";
-      }
-    });
-    const cards = Object.entries(repo.packages)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([id, record]) => packageCard(id, record))
-      .filter(Boolean);
-    byId("package-list").replaceChildren(...cards);
-    byId("count").textContent = cards.length;
-    byId("empty").hidden = cards.length > 0;
-    byId("search").disabled = false;
-    byId("search").addEventListener("input", (event) => {
-      const query = event.target.value.toLocaleLowerCase().trim();
-      for (const card of cards) card.hidden = !card.dataset.search.includes(query);
-      const count = cards.filter((card) => !card.hidden).length;
-      byId("count").textContent = count;
-      byId("empty").hidden = count > 0;
-      byId("empty").textContent = cards.length
-        ? "一致するパッケージがありません。"
-        : "公開されているパッケージはまだありません。";
-    });
+    await navigator.clipboard.writeText(url);
+    getElement("status").textContent = "URL をコピーしました。";
   } catch {
-    byId("description").textContent = "リポジトリ情報を読み込めませんでした。";
-    byId("status").textContent =
-      "ページを再読み込みするか、JSON リンクからリポジトリ URL を取得してください。";
+    getElement("repo-url").focus();
+    getElement("repo-url").select();
+    getElement("status").textContent =
+      "URL を選択しました。Ctrl+C / Command+C でコピーしてください。";
   }
 }
+
+function enableCopyButton(url) {
+  getElement("copy").disabled = false;
+  getElement("copy").addEventListener("click", () => copyRepositoryUrl(url));
+}
+
+function updatePackageCount(count) {
+  getElement("count").textContent = count;
+  getElement("empty").hidden = count > 0;
+}
+
+function renderPackageList(packages) {
+  const cards = Object.entries(packages)
+    .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+    .map(([id, record]) => packageCard(id, record))
+    .filter(Boolean);
+  getElement("package-list").replaceChildren(...cards);
+  updatePackageCount(cards.length);
+  return cards;
+}
+
+function filterPackageCards(cards, query) {
+  for (const card of cards) card.hidden = !card.dataset.search.includes(query);
+  const visibleCount = cards.filter((card) => !card.hidden).length;
+  updatePackageCount(visibleCount);
+  getElement("empty").textContent = cards.length
+    ? "一致するパッケージがありません。"
+    : "公開されているパッケージはまだありません。";
+}
+
+function enableSearch(cards) {
+  getElement("search").disabled = false;
+  getElement("search").addEventListener("input", (event) => {
+    const query = event.target.value.toLocaleLowerCase().trim();
+    filterPackageCards(cards, query);
+  });
+}
+
+function showLoadError() {
+  getElement("description").textContent = "リポジトリ情報を読み込めませんでした。";
+  getElement("status").textContent =
+    "ページを再読み込みするか、JSON リンクからリポジトリ URL を取得してください。";
+}
+
+async function start() {
+  try {
+    const { repository, site } = await loadRepositoryData();
+    const url = validateRepository(repository);
+    renderRepositoryHeader(repository, site, url);
+    enableCopyButton(url);
+    const cards = renderPackageList(repository.packages);
+    enableSearch(cards);
+  } catch {
+    showLoadError();
+  }
+}
+
 start();
