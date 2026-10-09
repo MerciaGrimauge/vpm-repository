@@ -5,17 +5,60 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Iterable, Iterator
+from email.message import Message
 import json
 import math
 import os
 from pathlib import Path
 import re
 import sys
+from typing import Any, IO, NotRequired, Protocol, TypeAlias, TypedDict, cast
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 MAX_JSON = 1024 * 1024
+
+
+JSONValue: TypeAlias = (
+    None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
+)
+# Package manifests allow additional fields; their contents are validated at use sites.
+JSONObject: TypeAlias = dict[str, Any]
+
+
+class GitHubSource(TypedDict):
+    repo: str
+    packageName: str
+    manifestAsset: str
+    includePrerelease: bool
+    zipAsset: NotRequired[str]
+
+
+class GitHubConfig(TypedDict):
+    githubRepos: list[GitHubSource]
+
+
+class PackageRecord(TypedDict):
+    versions: dict[str, JSONObject]
+
+
+Packages: TypeAlias = dict[str, PackageRecord]
+
+
+class RepositoryIndex(TypedDict):
+    name: str
+    id: str
+    url: str
+    author: str
+    packages: Packages
+
+
+class GitHubClient(Protocol):
+    def json(self, url: str, *, asset: bool = False) -> JSONValue: ...
+
+    def pages(self, endpoint: str) -> Iterator[JSONObject]: ...
 
 
 NAME = re.compile(r"[a-z0-9][a-z0-9_-]*(?:\.[a-z0-9][a-z0-9_-]*)+\Z")
@@ -38,39 +81,39 @@ class Invalid(ValueError):
     """Invalid input, reported without a traceback by the CLI."""
 
 
-def require(condition, message):
+def require(condition: object, message: str) -> None:
     if not condition:
         raise Invalid(message)
 
 
-def text(value, label):
+def text(value: object, label: str) -> str:
     require(
         isinstance(value, str) and bool(value.strip()),
         f"{label}: nonempty string required",
     )
-    return value
+    return cast(str, value)
 
 
-def object_value(value, label):
+def object_value(value: object, label: str) -> JSONObject:
     require(isinstance(value, dict), f"{label}: object required")
-    return value
+    return cast(JSONObject, value)
 
 
-def unique_object(pairs):
-    result = {}
+def unique_object(pairs: Iterable[tuple[str, JSONValue]]) -> JSONObject:
+    result: JSONObject = {}
     for key, value in pairs:
         require(key not in result, f"duplicate JSON key: {key}")
         result[key] = value
     return result
 
 
-def finite_float(value):
+def finite_float(value: str) -> float:
     result = float(value)
     require(math.isfinite(result), "nonfinite JSON number")
     return result
 
 
-def decode_json(data, label):
+def decode_json(data: bytes, label: str) -> JSONValue:
     require(len(data) <= MAX_JSON, f"{label}: JSON exceeds 1 MiB")
     try:
         return json.loads(
@@ -85,12 +128,12 @@ def decode_json(data, label):
         raise Invalid(f"{label}: invalid UTF-8 JSON") from error
 
 
-def read_json(file):
+def read_json(file: str | os.PathLike[str]) -> JSONValue:
     with Path(file).open("rb") as stream:
         return decode_json(stream.read(MAX_JSON + 1), str(file))
 
 
-def write_json(file, value):
+def write_json(file: str | os.PathLike[str], value: object) -> None:
     file = Path(file)
     file.parent.mkdir(parents=True, exist_ok=True)
     temporary = file.with_name(file.name + ".tmp")
@@ -102,8 +145,9 @@ def write_json(file, value):
     temporary.replace(file)
 
 
-def https_url(value, label, *, zip_file=False):
+def https_url(value: object, label: str, *, zip_file: bool = False) -> SplitResult:
     text(value, label)
+    value = cast(str, value)
     try:
         parsed = urlsplit(value)
         port = parsed.port
@@ -126,10 +170,11 @@ def https_url(value, label, *, zip_file=False):
     return parsed
 
 
-def version(value):
+def version(value: object) -> re.Match[str]:
     text(value, "version")
-    match = SEMVER.fullmatch(value)
+    match = SEMVER.fullmatch(cast(str, value))
     require(match is not None, f"invalid SemVer: {value}")
+    match = cast(re.Match[str], match)
     prerelease = match[4]
     if prerelease:
         for part in prerelease.split("."):
@@ -140,7 +185,7 @@ def version(value):
     return match
 
 
-def manifest(value):
+def manifest(value: object) -> JSONObject:
     result = copy.deepcopy(object_value(value, "manifest"))
     require(
         isinstance(result.get("name"), str) and NAME.fullmatch(result["name"]),
@@ -178,7 +223,7 @@ def manifest(value):
     return result
 
 
-def merge(packages, item):
+def merge(packages: Packages, item: object) -> None:
     item = manifest(item)
     versions = packages.setdefault(item["name"], {"versions": {}})["versions"]
     old = versions.get(item["version"])
@@ -190,7 +235,15 @@ def merge(packages, item):
 
 
 class NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
+    def redirect_request(
+        self,
+        req: Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: Message,
+        newurl: str,
+    ) -> None:
         return None
 
 
@@ -203,11 +256,11 @@ class GitHub:
         "objects.githubusercontent.com",
     }
 
-    def __init__(self, token=None):
+    def __init__(self, token: str | None = None) -> None:
         self.token = token
         self.opener = build_opener(NoRedirect())
 
-    def json(self, url, *, asset=False):
+    def json(self, url: str, *, asset: bool = False) -> JSONValue:
         for _ in range(6):
             parsed = https_url(url, "GitHub request")
             require(
@@ -238,21 +291,23 @@ class GitHub:
                 raise Invalid("GitHub request failed or timed out") from error
         raise Invalid("too many GitHub redirects")
 
-    def pages(self, endpoint):
+    def pages(self, endpoint: str) -> Iterator[JSONObject]:
         for page in range(1, 101):
             data = self.json(
                 f"https://api.github.com/{endpoint}?per_page=100&page={page}"
             )
             require(isinstance(data, list), "GitHub API list response required")
-            yield from data
-            if len(data) < 100:
+            yield from cast(list[JSONObject], data)
+            if len(cast(list[JSONObject], data)) < 100:
                 return
         raise Invalid(
             "GitHub pagination limit reached; use explicit release records for larger histories"
         )
 
 
-def github_sources(config, packages, client):
+def github_sources(
+    config: GitHubConfig, packages: Packages, client: GitHubClient
+) -> None:
     for source in config["githubRepos"]:
         repo = source["repo"]
         for release in client.pages(f"repos/{repo}/releases"):
@@ -281,7 +336,7 @@ def github_sources(config, packages, client):
                 "manifest asset exceeds limit",
             )
             item = object_value(
-                client.json(asset.get("browser_download_url"), asset=True),
+                client.json(cast(str, asset.get("browser_download_url")), asset=True),
                 "GitHub package manifest",
             )
             version(item.get("version"))
@@ -363,17 +418,17 @@ SECRET_QUERY = re.compile(r"(?:token|secret|password|signature|api[_-]?key)=", r
 class PublicGitHub(GitHub):
     """Share release metadata between packages registered in the same repository."""
 
-    def __init__(self, token=None):
+    def __init__(self, token: str | None = None) -> None:
         super().__init__(token)
-        self.page_cache = {}
+        self.page_cache: dict[str, list[JSONObject]] = {}
 
-    def pages(self, endpoint):
+    def pages(self, endpoint: str) -> Iterator[JSONObject]:
         if endpoint not in self.page_cache:
             self.page_cache[endpoint] = list(super().pages(endpoint))
         return iter(copy.deepcopy(self.page_cache[endpoint]))
 
 
-def check_public_text(value, email):
+def check_public_text(value: object, email: str) -> None:
     if isinstance(value, dict):
         for key, child in value.items():
             check_public_text(key, email)
@@ -389,10 +444,10 @@ def check_public_text(value, email):
         require(not SECRET_QUERY.search(value), "credential-bearing text")
 
 
-def validate_sources(value):
+def validate_sources(value: object) -> list[GitHubSource]:
     require(isinstance(value, list), "sources must be an array")
     seen = set()
-    for source in value:
+    for source in cast(list[JSONObject], value):
         require(isinstance(source, dict), "source must be an object")
         require(
             set(source)
@@ -421,15 +476,16 @@ def validate_sources(value):
         require(type(source["includePrerelease"]) is bool, "invalid prerelease flag")
         require(source["packageName"] not in seen, "duplicate package registration")
         seen.add(source["packageName"])
-    return value
+    return cast(list[GitHubSource], value)
 
 
-def validate_index(value):
+def validate_index(value: object) -> RepositoryIndex:
     require(
         isinstance(value, dict)
         and set(value) == {"name", "id", "url", "author", "packages"},
         "unexpected listing fields",
     )
+    value = cast(JSONObject, value)
     require(value["name"] == "MerciaGrimauge VPM Repository", "unexpected listing name")
     require(value["id"] == "io.github.merciagrimauge.vpm", "unexpected listing ID")
     require(
@@ -451,15 +507,15 @@ def validate_index(value):
                 "package keys do not match manifest",
             )
             manifest(item)
-    return value
+    return cast(RepositoryIndex, value)
 
 
-def synchronize(root, client=None):
+def synchronize(root: Path, client: GitHubClient | None = None) -> int:
     # Repository metadata must confirm public visibility before reading Releases.
     client = client or PublicGitHub(os.getenv("GITHUB_TOKEN"))
     previous = validate_index(read_json(root / "index.json"))
     sources = validate_sources(read_json(root / "sources.json"))
-    profile = client.json(f"https://api.github.com/users/{OWNER}")
+    profile = cast(JSONObject, client.json(f"https://api.github.com/users/{OWNER}"))
     require(
         profile.get("login") == OWNER and type(profile.get("id")) is int,
         "invalid public owner",
@@ -471,7 +527,9 @@ def synchronize(root, client=None):
     )
     email = f"{profile['id']}+{OWNER}@users.noreply.github.com"
     for repository in {source["repo"] for source in sources}:
-        metadata = client.json(f"https://api.github.com/repos/{repository}")
+        metadata = cast(
+            JSONObject, client.json(f"https://api.github.com/repos/{repository}")
+        )
         require(
             metadata.get("private") is False
             and metadata.get("full_name") == repository,
@@ -530,7 +588,7 @@ def synchronize(root, client=None):
     return added
 
 
-def main():
+def main() -> int:
     try:
         added = synchronize(ROOT)
         print(f"Collected {added} new package versions")
