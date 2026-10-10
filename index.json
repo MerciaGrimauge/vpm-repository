@@ -27,6 +27,50 @@
           "zipSHA256": "e94aacd45847a4835f02e877f631b07f5215752556fea31589b2f1037e7a51aa"
         }
       }
+    },
+    "io.github.merciagrimauge.avatar-placement": {
+      "versions": {
+        "0.2.4": {
+          "author": {
+            "email": "218344561+MerciaGrimauge@users.noreply.github.com",
+            "name": "マーシア・グリマージ",
+            "url": "https://github.com/MerciaGrimauge"
+          },
+          "description": "Shared avatar prefab placement detection and typed notifications.",
+          "displayName": "Avatar Placement Condition",
+          "documentationUrl": "https://github.com/MerciaGrimauge/unity-editor-event-handlers/tree/main/Packages/io.github.merciagrimauge.avatar-placement",
+          "license": "MIT",
+          "name": "io.github.merciagrimauge.avatar-placement",
+          "unity": "2022.3",
+          "url": "https://github.com/MerciaGrimauge/unity-editor-event-handlers/releases/download/v0.5.0/io.github.merciagrimauge.avatar-placement-0.2.4.zip",
+          "version": "0.2.4",
+          "vpmDependencies": {
+            "io.github.merciagrimauge.editor-event-handlers": "^0.3.0"
+          },
+          "zipSHA256": "aa2eada61169728840d630528b51795f06ebfc0245510218b1255e03f0b1c46d"
+        }
+      }
+    },
+    "io.github.merciagrimauge.editor-event-handlers": {
+      "versions": {
+        "0.3.0": {
+          "author": {
+            "email": "218344561+MerciaGrimauge@users.noreply.github.com",
+            "name": "マーシア・グリマージ",
+            "url": "https://github.com/MerciaGrimauge"
+          },
+          "description": "Typed editor change conditions and cooperative transactional subscriptions.",
+          "displayName": "Editor Event Handlers",
+          "documentationUrl": "https://github.com/MerciaGrimauge/unity-editor-event-handlers/tree/main/Packages/io.github.merciagrimauge.editor-event-handlers",
+          "license": "MIT",
+          "name": "io.github.merciagrimauge.editor-event-handlers",
+          "unity": "2022.3",
+          "url": "https://github.com/MerciaGrimauge/unity-editor-event-handlers/releases/download/v0.5.0/io.github.merciagrimauge.editor-event-handlers-0.3.0.zip",
+          "version": "0.3.0",
+          "vpmDependencies": {},
+          "zipSHA256": "312f53a914792e6d88cb772b2a31754c62284465814f8775f1470c2f1f83d358"
+        }
+      }
     }
   },
   "url": "https://merciagrimauge.github.io/vpm-repository/index.json"
