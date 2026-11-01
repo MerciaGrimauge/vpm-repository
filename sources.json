@@ -16,5 +16,11 @@
     "packageName": "io.github.merciagrimauge.aao-auto-attach",
     "manifestAsset": "aao-auto-attach.package.json",
     "includePrerelease": false
+  },
+  {
+    "repo": "MerciaGrimauge/legweaver",
+    "packageName": "io.github.merciagrimauge.legweaver",
+    "manifestAsset": "legweaver.package.json",
+    "includePrerelease": false
   }
 ]
